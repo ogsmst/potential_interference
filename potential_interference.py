@@ -30,19 +30,6 @@ radius = np.full(er.shape[0], 0.5)
 # 各電極の埋設深さを入力
 depth = np.zeros(er.shape[0])
 
-
-# B種とD種の情報を入力、反映する関数
-# (x座標, y座標, 電極長さ, 電極半径, 埋設深さ)
-info_b = [37, 27.5, 3, 0.005, 0.75]
-info_d = [39, 27.5, 3, 0.005, 0.75]
-
-er = np.append(er, np.array([info_d[0: 2], info_b[0: 2]]), axis=0)  # B, D種の(x, y)座標を挿入
-print(er)
-length = np.append(length, [info_d[2], info_b[2]])  # B, D種の電極長さを挿入
-print(length)
-radius = np.append(radius, [info_d[3], info_b[3]])  # B, D種の半径を挿入
-print(radius)
-depth  = np.append(depth,  [info_d[4], info_b[4]])  # B, D種の半径を挿入
 print(depth)
 
 # 電極間距離のから行列を作成
@@ -61,24 +48,52 @@ def impedance(z, i, j):
                    (depth[j] + z + np.sqrt(S[i, j] ** 2 + (depth[j] + z) ** 2)))
             )
 
+
 # ここから処理
 
 # 各電極距離の計算
-for ii in np.arange(np.shape(er)[0]):
-    for jj in np.arange(np.shape(er)[0]):
-        if ii == jj:  # ii=jjの時電極距離は電極半径となる
-            S[ii, jj] = radius[ii]
-        else:
-            S[ii, jj] = np.sqrt((er[ii, 0] - er[jj, 0]) ** 2 + (er[ii, 1] - er[jj, 1]) ** 2)
+def er_distance(i, j):
+    for ii in i:
+        for jj in j:
+            if ii == jj:  # ii=jjの時電極距離は電極半径となる
+                S[ii, jj] = radius[ii]
+            else:
+                S[ii, jj] = np.sqrt((er[ii, 0] - er[jj, 0]) ** 2 + (er[ii, 1] - er[jj, 1]) ** 2)
+
 
 # インピーダンス行列を作成
-for ii in np.arange(np.shape(er)[0]):
-    for jj in np.arange(np.shape(er)[0]):
-        matrix_impedance = partial(impedance, i = ii, j = jj)
-        range0 = depth[ii]
-        range1 = length[ii] + depth[ii]
-        Z[ii, jj] = integrate.quad(matrix_impedance, range0, range1)[0]
+def create_inpedance_matrix(i, j):
+    for ii in i:
+        for jj in j:
+            matrix_impedance = partial(impedance, i=ii, j=jj)
+            range0 = depth[ii]
+            range1 = length[ii] + depth[ii]
+            Z[ii, jj] = integrate.quad(matrix_impedance, range0, range1)[0]
+
+
+# 構造体地下杭の数×構造体地下杭の数の行列をそれぞれ作成
+# 地下杭同士の距離行列
+er_distance(np.arange(np.shape(er)[0]), np.arange(np.shape(er)[0]))
+
+# 地下杭のインピーダンス行列
+create_inpedance_matrix(np.arange(np.shape(er)[0]), np.arange(np.shape(er)[0]))
 print(Z)
+
+
+# (x座標, y座標, 電極長さ, 電極半径, 埋設深さ)
+info_b = [37, 27.5, 3, 0.005, 0.75]
+info_d = [39, 27.5, 3, 0.005, 0.75]
+
+# B種とD種の情報を入力、反映
+er = np.append(er, np.array([info_d[0: 2], info_b[0: 2]]), axis=0)  # B, D種の(x, y)座標を挿入
+print(er)
+length = np.append(length, [info_d[2], info_b[2]])  # B, D種の電極長さを挿入
+print(length)
+radius = np.append(radius, [info_d[3], info_b[3]])  # B, D種の半径を挿入
+print(radius)
+depth = np.append(depth,  [info_d[4], info_b[4]])  # B, D種の半径を挿入
+
+
 # インピーダンス行列の逆行列
 Z_inv = np.linalg.inv(Z)
 
